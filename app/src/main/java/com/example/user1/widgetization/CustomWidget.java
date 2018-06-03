@@ -660,6 +660,13 @@ public class CustomWidget extends RelativeLayout {
                         ImageButton btn = (ImageButton) shrinkView.findViewById(R.id.button_Up);
                         addShrinkButtonEvent(btn, k);
                         contentLayout.addView(shrinkView);
+                        for(int n = 0; n < columnNumber; n++){
+                            int currentHorizontalWeight = specs.get(index2)[3];
+                            if(currentHorizontalWeight > 1){
+                                n = n+(currentHorizontalWeight-1);
+                            }
+                            ++index2;
+                        }
                         continue;
                     }
                 }
