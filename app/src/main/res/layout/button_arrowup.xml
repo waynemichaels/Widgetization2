@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <ImageButton
+        android:id="@+id/Button_Shrink"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:background="@color/cardview_shadow_end_color"
+        android:src="@drawable/collapse_arrow"
+        android:scaleType="fitCenter"
+        android:layout_alignParentEnd="true"/>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_gravity="center"
+        android:background="#000000"
+        android:layout_alignBottom="@id/Button_Shrink"/>
+</RelativeLayout>
