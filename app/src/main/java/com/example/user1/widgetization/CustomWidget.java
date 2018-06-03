@@ -34,7 +34,9 @@ import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -102,8 +104,9 @@ public class CustomWidget extends RelativeLayout {
     [2] - the length of the border line
     */
     private ArrayList<int[]> verticalBorders = new ArrayList<int[]>();
-
     private ArrayList<Integer> shrinkRows = new ArrayList<Integer>();
+
+    private Map shrinkButtonStates = new HashMap();
 
     /*
     These 2 variables hold the calculated dimentions of the screen
@@ -272,363 +275,6 @@ public class CustomWidget extends RelativeLayout {
         return  lineView;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
-    private void makeLayout(){
-        /*
-        This will hold the spec objects for individual cells
-        It will be populated in the loop below
-        */
-        int index = 0;
-        int i = 0;
-
-        //Loop through all the items to be added into the layout
-
-
-        //This is a label that will be used to break out of the outer loop since we have 2 nested for loops
-        //The use of 'outerloop' can be seen below
-        outerloop:
-        do{
-            for(int j=0 ; j<columnNumber; j++){
-                /*
-                This is so that the row number can be generated dynamically
-                The do while loop is stopped when all the widgets have been
-                configured
-                */
-                if(!(index < gridContentWidgets.size())){
-                    break outerloop;
-                }
-                /*
-                int [] cellSpec objects are used to configure individual cells
-                [0] - row starting point
-                [1] - column starting point
-                [2] - row span
-                [3] - column span
-                */
-                int [] cellSpec = new int[4];
-                boolean cellAdded = false;
-                /*
-                Loop through an array of cell span configurations to check
-                if the current cells has been set to have a cell span greater
-                than 1
-                NB: We initialized at the top
-                */
-                for(int[] spannedCell : cellSpans){
-                    if(spannedHorizontally(i,j) > 1 || spannedVertically(i,j) > 1){
-                        //set the row and column spec if any
-                        cellSpec[0] = i;
-                        cellSpec[1] = j;
-                        cellSpec[2] = spannedVertically(i,j);
-                        cellSpec[3] = spannedHorizontally(i,j);
-                        cellAdded = true;
-                        j = j+(spannedCell[3]-1);
-                    }
-                }
-                /*
-                check if the cell has already been speced above, if not
-                spec the cell leaving the row and column spans as default
-                */
-                if (!cellAdded){
-                    cellSpec[0] = i;
-                    cellSpec[1] = j;
-                    cellSpec[2] = 1;
-                    cellSpec[3] = 1;
-                }
-
-                //add the cell configuration to the global variable specs
-                specs.add(cellSpec);
-                ++index;
-                /**Log.d("HERE!!!!!","INDEX :"+index+" ROW :"+i+" COLUMN :"+
-                        j+" ROWSPAN :"+cellSpec[2]+" COLUMNSPAN :"+
-                        cellSpec[3]);**/
-            }
-            ++i;
-        }while(true);
-
-        //Remove all the views from the grid layout we will populate
-        contentLayout.removeAllViews();
-
-        /*
-        contentLayout.LayoutParams object contains the configurations of
-        the entire layout as a whole
-        */
-        LinearLayout.LayoutParams param = (LinearLayout.LayoutParams) contentLayout.getLayoutParams();
-        param.height = LayoutParams.MATCH_PARENT;
-        param.width = LayoutParams.MATCH_PARENT;
-        contentLayout.setLayoutParams(param);
-
-        //update to the right number of rows
-        rowNumber = i+1;
-
-        //This will be used to check how many items have been added
-        int index2 = 0;
-
-        //This is a label that will be used to break out of the outer loop since we have 2 nested for loops
-        //The use of 'outerloop2' can be seen below
-        outerloop2:
-        for(int k = 0; k < rowNumber; k++){
-            //Check if this row needs to have a shrink button and add it
-            if(hasShrink(k)){
-                LayoutInflater  shrinkButtonInflater = LayoutInflater.from(contentLayout.getContext());
-                View shrinkView = (View) shrinkButtonInflater.inflate(R.layout.button_arrowdown, null);
-                contentLayout.addView(shrinkView);
-            }
-
-            //rowlayout will be used to fill items of each row
-            LinearLayout rowLayout = new LinearLayout(contentLayout.getContext());
-
-            LinearLayout.LayoutParams currentRowParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-            currentRowParams.gravity = Gravity.FILL;
-            rowLayout.setLayoutParams(currentRowParams);
-            rowLayout.setOrientation(LinearLayout.HORIZONTAL);
-
-            //loop through each cell in the row
-            for(int n = 0; n < columnNumber; n++){
-                //break out of the outer for loop if all the items have been added
-                if(!(index2 < gridContentWidgets.size())){
-                    break outerloop2;
-                }
-
-                //Add an initial space object to seperate the view from the left margin
-                Space spacer = new Space(rowLayout.getContext());
-                LinearLayout.LayoutParams currentSpaceParams  =
-                        new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                currentSpaceParams.weight = 1;
-                spacer.setLayoutParams(currentSpaceParams);
-                rowLayout.addView(spacer, currentSpaceParams);
-
-                //Create parameters to be used for the items to be added in each cell
-                LinearLayout.LayoutParams currentCellParams  = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                int horizontalWeight = specs.get(index2)[3];
-                currentCellParams.weight = horizontalWeight;
-                currentCellParams.gravity = Gravity.CENTER_VERTICAL;
-
-                //create layout and parameters to be used for adding horizontal lines to each cell
-                LinearLayout lineLayout = new LinearLayout(contentLayout.getContext());
-                LinearLayout.LayoutParams lineParams = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                lineParams.gravity = Gravity.CENTER_VERTICAL;
-                lineLayout.setLayoutParams(lineParams);
-                lineLayout.setOrientation(LinearLayout.VERTICAL);
-
-                /*
-                Check if the object of the current cell is of the types
-                smallText = 0;
-                bigText = 1;
-                date = 6;
-                This same check will also be done for the other types below
-
-                THE SAME ACTIONS ARE REPEATED FOR ALL TYPES
-                */
-                if(gridContentWidgets.get(index2) == 0 ||
-                        gridContentWidgets.get(index2) == 1 ||
-                        gridContentWidgets.get(index2) == 6){
-                    //get the view from the array list widgetList
-                    TextView currentTxt = (TextView)widgetList.get(index2);
-                    currentTxt.setLayoutParams(currentCellParams);
-                    //remove the views parent !!!This is because of a layout error
-                    if(currentTxt.getParent()!=null)
-                        ((ViewGroup)currentTxt.getParent()).removeView(currentTxt);
-                    //Add the view to a layout that will hold the view and horizontal border beneath it
-                    lineLayout.addView(currentTxt, currentCellParams);
-                    //Check if this current cell has a horizontal border beneath it then add if necessary
-                    if(hasHorizontalBorder(k, n)){
-                        View lineView = makeHorizontalLine();
-                        LinearLayout.LayoutParams currentLineParams =
-                                new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-                        currentLineParams.weight = 1;
-                        currentLineParams.topMargin = 10;
-                        currentLineParams.bottomMargin = 5;
-                        lineView.setLayoutParams(currentLineParams);
-
-                        lineLayout.addView(lineView, currentLineParams);
-                    }
-                    rowLayout.addView(lineLayout, lineParams);
-                    //Check if this current cell has a vertical border to the right of it then add if necessary
-                    if(hasVerticalBorder(k, n)){
-                        LinearLayout.LayoutParams currentLineSpaceParams  =
-                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                        currentLineSpaceParams.weight = 1;
-                        Space spacerLine = new Space(rowLayout.getContext());
-                        rowLayout.addView(spacerLine, currentLineSpaceParams);
-
-                        View lineView = makeVerticalLine();
-                        LinearLayout.LayoutParams currentLineParams =
-                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                        currentLineParams.weight = 1;
-                        currentLineParams.topMargin = 10;
-                        currentLineParams.bottomMargin = 10;
-                        lineView.setLayoutParams(currentLineParams);
-
-                        rowLayout.addView(lineView, currentLineParams);
-                    }
-                }
-                else if(gridContentWidgets.get(index2) == 4||
-                        gridContentWidgets.get(index2) == 5||
-                        gridContentWidgets.get(index2) == 7||
-                        gridContentWidgets.get(index2) == 8){
-                    View currentView = (View)widgetList.get(index2);
-                    currentView.setLayoutParams(currentCellParams);
-
-                    lineLayout.addView(currentView, currentCellParams);
-                    if(hasHorizontalBorder(k, n)){
-                        View lineView = makeHorizontalLine();
-                        LinearLayout.LayoutParams currentLineParams =
-                                new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-                        currentLineParams.weight = 1;
-                        currentLineParams.topMargin = 10;
-                        currentLineParams.bottomMargin = 5;
-                        lineView.setLayoutParams(currentLineParams);
-
-                        lineLayout.addView(lineView, currentLineParams);
-                    }
-                    rowLayout.addView(lineLayout, lineParams);
-                    if(hasVerticalBorder(k, n)){
-                        LinearLayout.LayoutParams currentLineSpaceParams  =
-                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                        currentLineSpaceParams.weight = 1;
-                        Space spacerLine = new Space(rowLayout.getContext());
-                        rowLayout.addView(spacerLine, currentLineSpaceParams);
-
-                        View lineView = makeVerticalLine();
-                        LinearLayout.LayoutParams currentLineParams =
-                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                        currentLineParams.weight = 1;
-                        currentLineParams.topMargin = 10;
-                        currentLineParams.bottomMargin = 10;
-                        lineView.setLayoutParams(currentLineParams);
-
-                        rowLayout.addView(lineView, currentLineParams);
-                    }
-                }
-                else if(gridContentWidgets.get(index2) == 2||
-                        gridContentWidgets.get(index2) == 3){
-                    View currentImg = (View)widgetList.get(index2);
-                    currentImg.setLayoutParams(currentCellParams);
-
-                    lineLayout.addView(currentImg, currentCellParams);
-                    if(hasHorizontalBorder(k, n)){
-                        View lineView = makeHorizontalLine();
-                        LinearLayout.LayoutParams currentLineParams =
-                                new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-                        currentLineParams.weight = 1;
-                        currentLineParams.topMargin = 10;
-                        currentLineParams.bottomMargin = 5;
-                        lineView.setLayoutParams(currentLineParams);
-
-                        lineLayout.addView(lineView, currentLineParams);
-                    }
-                    rowLayout.addView(lineLayout, lineParams);
-                    if(hasVerticalBorder(k, n)){
-                        LinearLayout.LayoutParams currentLineSpaceParams  =
-                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                        currentLineSpaceParams.weight = 1;
-                        Space spacerLine = new Space(rowLayout.getContext());
-                        rowLayout.addView(spacerLine, currentLineSpaceParams);
-
-                        View lineView = makeVerticalLine();
-                        LinearLayout.LayoutParams currentLineParams =
-                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                        currentLineParams.weight = 1;
-                        currentLineParams.topMargin = 10;
-                        currentLineParams.bottomMargin = 10;
-                        lineView.setLayoutParams(currentLineParams);
-
-                        rowLayout.addView(lineView, currentLineParams);
-                    }
-                }
-                else if(gridContentWidgets.get(index2) == 9||
-                        gridContentWidgets.get(index2) == 10){
-                    View currentRating = (View) widgetList.get(index2);
-                    currentRating.setLayoutParams(currentCellParams);
-
-                    lineLayout.addView(currentRating, currentCellParams);
-                    if(hasHorizontalBorder(k, n)){
-                        View lineView = makeHorizontalLine();
-                        LinearLayout.LayoutParams currentLineParams =
-                                new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-                        currentLineParams.weight = 1;
-                        currentLineParams.topMargin = 10;
-                        currentLineParams.bottomMargin = 5;
-                        lineView.setLayoutParams(currentLineParams);
-
-                        lineLayout.addView(lineView, currentLineParams);
-                    }
-                    rowLayout.addView(lineLayout, lineParams);
-                    if(hasVerticalBorder(k, n)){
-                        LinearLayout.LayoutParams currentLineSpaceParams  =
-                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                        currentLineSpaceParams.weight = 1;
-                        Space spacerLine = new Space(rowLayout.getContext());
-                        rowLayout.addView(spacerLine, currentLineSpaceParams);
-
-                        View lineView = makeVerticalLine();
-                        LinearLayout.LayoutParams currentLineParams =
-                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                        currentLineParams.weight = 1;
-                        currentLineParams.topMargin = 10;
-                        currentLineParams.bottomMargin = 10;
-                        lineView.setLayoutParams(currentLineParams);
-
-                        rowLayout.addView(lineView, currentLineParams);
-                    }
-                }
-                else if(gridContentWidgets.get(index2) == 11||
-                        gridContentWidgets.get(index2) == 12||
-                        gridContentWidgets.get(index2) == 13){
-                    View currentView = (View)widgetList.get(index2);
-                    currentView.setLayoutParams(currentCellParams);
-
-                    if(currentView.getParent()!=null)
-                        ((ViewGroup)currentView.getParent()).removeView(currentView);
-                    lineLayout.addView(currentView, currentCellParams);
-                    if(hasHorizontalBorder(k, n)){
-                        View lineView = makeHorizontalLine();
-                        LinearLayout.LayoutParams currentLineParams =
-                                new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
-                        currentLineParams.weight = 1;
-                        currentLineParams.topMargin = 10;
-                        currentLineParams.bottomMargin = 5;
-                        lineView.setLayoutParams(currentLineParams);
-
-                        lineLayout.addView(lineView, currentLineParams);
-                    }
-                    rowLayout.addView(lineLayout, lineParams);
-                    if(hasVerticalBorder(k, n)){
-                        LinearLayout.LayoutParams currentLineSpaceParams  =
-                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                        currentLineSpaceParams.weight = 1;
-                        Space spacerLine = new Space(rowLayout.getContext());
-                        rowLayout.addView(spacerLine, currentLineSpaceParams);
-
-                        View lineView = makeVerticalLine();
-                        LinearLayout.LayoutParams currentLineParams =
-                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                        currentLineParams.weight = 1;
-                        currentLineParams.topMargin = 10;
-                        currentLineParams.bottomMargin = 10;
-                        lineView.setLayoutParams(currentLineParams);
-
-                        rowLayout.addView(lineView, currentLineParams);
-                    }
-                }
-
-                horizontalWeight = specs.get(index2)[3];
-                if(horizontalWeight > 1){
-                    n = n+(horizontalWeight-1);
-                }
-                ++index2;
-            }
-            //Add a spacer object at the end of the row
-            LinearLayout.LayoutParams currentSpaceParams  =
-                    new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-            currentSpaceParams.weight = 1;
-            Space spacerLast = new Space(rowLayout.getContext());
-            rowLayout.addView(spacerLast, currentSpaceParams);
-
-            contentLayout.addView(rowLayout);
-        }
-    }
-
-
     /**
      * This method creates an alert popup of Neutral kind on pressing the icons button
      * @param message this is the message that will be displayed on the popup dialog
@@ -722,6 +368,20 @@ public class CustomWidget extends RelativeLayout {
     private void removeTitleDescription(){
         textviewTitle.setVisibility(View.GONE);
         textviewDescription.setVisibility(View.GONE);
+    }
+
+    private void addShrinkButtonEvent(final ImageButton btn, final int index){
+        btn.setOnClickListener(new OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
+            @Override
+            public void onClick(View view) {
+                if (btn.getId() == R.id.button_Down){
+                    shrinkButtonStates.put(index,true);
+                }else
+                    shrinkButtonStates.put(index,false);
+                makeLayout();
+            }
+        });
     }
 
     private void close(){
@@ -892,6 +552,375 @@ public class CustomWidget extends RelativeLayout {
                     widgetList.add(lineView);
                     break;
             }
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
+    private void makeLayout(){
+        /*
+        This will hold the spec objects for individual cells
+        It will be populated in the loop below
+        */
+        int index = 0;
+        int i = 0;
+
+        //Loop through all the items to be added into the layout
+
+
+        //This is a label that will be used to break out of the outer loop since we have 2 nested for loops
+        //The use of 'outerloop' can be seen below
+        outerloop:
+        do{
+            for(int j=0 ; j<columnNumber; j++){
+                /*
+                This is so that the row number can be generated dynamically
+                The do while loop is stopped when all the widgets have been
+                configured
+                */
+                if(!(index < gridContentWidgets.size())){
+                    break outerloop;
+                }
+                /*
+                int [] cellSpec objects are used to configure individual cells
+                [0] - row starting point
+                [1] - column starting point
+                [2] - row span
+                [3] - column span
+                */
+                int [] cellSpec = new int[4];
+                boolean cellAdded = false;
+                /*
+                Loop through an array of cell span configurations to check
+                if the current cells has been set to have a cell span greater
+                than 1
+                NB: We initialized at the top
+                */
+                for(int[] spannedCell : cellSpans){
+                    if(spannedHorizontally(i,j) > 1 || spannedVertically(i,j) > 1){
+                        //set the row and column spec if any
+                        cellSpec[0] = i;
+                        cellSpec[1] = j;
+                        cellSpec[2] = spannedVertically(i,j);
+                        cellSpec[3] = spannedHorizontally(i,j);
+                        cellAdded = true;
+                        j = j+(spannedCell[3]-1);
+                    }
+                }
+                /*
+                check if the cell has already been speced above, if not
+                spec the cell leaving the row and column spans as default
+                */
+                if (!cellAdded){
+                    cellSpec[0] = i;
+                    cellSpec[1] = j;
+                    cellSpec[2] = 1;
+                    cellSpec[3] = 1;
+                }
+
+                //add the cell configuration to the global variable specs
+                specs.add(cellSpec);
+                ++index;
+                /**Log.d("HERE!!!!!","INDEX :"+index+" ROW :"+i+" COLUMN :"+
+                 j+" ROWSPAN :"+cellSpec[2]+" COLUMNSPAN :"+
+                 cellSpec[3]);**/
+            }
+            ++i;
+        }while(true);
+
+        //Remove all the views from the grid layout we will populate
+        contentLayout.removeAllViews();
+
+        /*
+        contentLayout.LayoutParams object contains the configurations of
+        the entire layout as a whole
+        */
+        LinearLayout.LayoutParams param = (LinearLayout.LayoutParams) contentLayout.getLayoutParams();
+        param.height = LayoutParams.MATCH_PARENT;
+        param.width = LayoutParams.MATCH_PARENT;
+        contentLayout.setLayoutParams(param);
+
+        //update to the right number of rows
+        rowNumber = i+1;
+
+        //This will be used to check how many items have been added
+        int index2 = 0;
+
+        //This is a label that will be used to break out of the outer loop since we have 2 nested for loops
+        //The use of 'outerloop2' can be seen below
+        outerloop2:
+        for(int k = 0; k < rowNumber; k++){
+            //rowlayout will be used to fill items of each row
+            LinearLayout rowLayout = new LinearLayout(contentLayout.getContext());
+
+            if(hasShrink(k)){
+                LayoutInflater  shrinkButtonInflater = LayoutInflater.from(contentLayout.getContext());
+                if(shrinkButtonStates.containsKey(k)){
+                    if ((boolean)shrinkButtonStates.get(k)){
+                        View shrinkView = (View) shrinkButtonInflater.inflate(R.layout.button_arrowup, null);
+                        ImageButton btn = (ImageButton) shrinkView.findViewById(R.id.button_Up);
+                        addShrinkButtonEvent(btn, k);
+                        contentLayout.addView(shrinkView);
+                        continue;
+                    }
+                }
+
+                View shrinkView = (View) shrinkButtonInflater.inflate(R.layout.button_arrowdown, null);
+                ImageButton btn = (ImageButton) shrinkView.findViewById(R.id.button_Down);
+                addShrinkButtonEvent(btn, k);
+                shrinkButtonStates.put(k,false);
+                contentLayout.addView(shrinkView);
+            }
+
+            LinearLayout.LayoutParams currentRowParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+            currentRowParams.gravity = Gravity.FILL;
+            rowLayout.setLayoutParams(currentRowParams);
+            rowLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+            //loop through each cell in the row
+            for(int n = 0; n < columnNumber; n++){
+                //break out of the outer for loop if all the items have been added
+                if(!(index2 < gridContentWidgets.size())){
+                    break outerloop2;
+                }
+
+                //Add an initial space object to seperate the view from the left margin
+                Space spacer = new Space(rowLayout.getContext());
+                LinearLayout.LayoutParams currentSpaceParams  =
+                        new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                currentSpaceParams.weight = 1;
+                spacer.setLayoutParams(currentSpaceParams);
+                rowLayout.addView(spacer, currentSpaceParams);
+
+                //Create parameters to be used for the items to be added in each cell
+                LinearLayout.LayoutParams currentCellParams  = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                int horizontalWeight = specs.get(index2)[3];
+                currentCellParams.weight = horizontalWeight;
+                currentCellParams.gravity = Gravity.CENTER_VERTICAL;
+
+                //create layout and parameters to be used for adding horizontal lines to each cell
+                LinearLayout lineLayout = new LinearLayout(contentLayout.getContext());
+                LinearLayout.LayoutParams lineParams = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                lineParams.gravity = Gravity.CENTER_VERTICAL;
+                lineLayout.setLayoutParams(lineParams);
+                lineLayout.setOrientation(LinearLayout.VERTICAL);
+
+                /*
+                Check if the object of the current cell is of the types
+                smallText = 0;
+                bigText = 1;
+                date = 6;
+                This same check will also be done for the other types below
+
+                THE SAME ACTIONS ARE REPEATED FOR ALL TYPES
+                */
+                if(gridContentWidgets.get(index2) == 0 ||
+                        gridContentWidgets.get(index2) == 1 ||
+                        gridContentWidgets.get(index2) == 6){
+                    //get the view from the array list widgetList
+                    TextView currentTxt = (TextView)widgetList.get(index2);
+                    currentTxt.setLayoutParams(currentCellParams);
+                    //remove the views parent !!!This is because of a layout error
+                    if(currentTxt.getParent()!=null)
+                        ((ViewGroup)currentTxt.getParent()).removeView(currentTxt);
+                    //Add the view to a layout that will hold the view and horizontal border beneath it
+                    lineLayout.addView(currentTxt, currentCellParams);
+                    //Check if this current cell has a horizontal border beneath it then add if necessary
+                    if(hasHorizontalBorder(k, n)){
+                        View lineView = makeHorizontalLine();
+                        LinearLayout.LayoutParams currentLineParams =
+                                new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+                        currentLineParams.weight = 1;
+                        currentLineParams.topMargin = 10;
+                        currentLineParams.bottomMargin = 5;
+                        lineView.setLayoutParams(currentLineParams);
+
+                        lineLayout.addView(lineView, currentLineParams);
+                    }
+                    rowLayout.addView(lineLayout, lineParams);
+                    //Check if this current cell has a vertical border to the right of it then add if necessary
+                    if(hasVerticalBorder(k, n)){
+                        LinearLayout.LayoutParams currentLineSpaceParams  =
+                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                        currentLineSpaceParams.weight = 1;
+                        Space spacerLine = new Space(rowLayout.getContext());
+                        rowLayout.addView(spacerLine, currentLineSpaceParams);
+
+                        View lineView = makeVerticalLine();
+                        LinearLayout.LayoutParams currentLineParams =
+                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                        currentLineParams.weight = 1;
+                        currentLineParams.topMargin = 10;
+                        currentLineParams.bottomMargin = 10;
+                        lineView.setLayoutParams(currentLineParams);
+
+                        rowLayout.addView(lineView, currentLineParams);
+                    }
+                }
+                else if(gridContentWidgets.get(index2) == 4||
+                        gridContentWidgets.get(index2) == 5||
+                        gridContentWidgets.get(index2) == 7||
+                        gridContentWidgets.get(index2) == 8){
+                    View currentView = (View)widgetList.get(index2);
+                    currentView.setLayoutParams(currentCellParams);
+                    if(currentView.getParent()!=null)
+                        ((ViewGroup)currentView.getParent()).removeView(currentView);
+                    lineLayout.addView(currentView, currentCellParams);
+                    if(hasHorizontalBorder(k, n)){
+                        View lineView = makeHorizontalLine();
+                        LinearLayout.LayoutParams currentLineParams =
+                                new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+                        currentLineParams.weight = 1;
+                        currentLineParams.topMargin = 10;
+                        currentLineParams.bottomMargin = 5;
+                        lineView.setLayoutParams(currentLineParams);
+
+                        lineLayout.addView(lineView, currentLineParams);
+                    }
+                    rowLayout.addView(lineLayout, lineParams);
+                    if(hasVerticalBorder(k, n)){
+                        LinearLayout.LayoutParams currentLineSpaceParams  =
+                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                        currentLineSpaceParams.weight = 1;
+                        Space spacerLine = new Space(rowLayout.getContext());
+                        rowLayout.addView(spacerLine, currentLineSpaceParams);
+
+                        View lineView = makeVerticalLine();
+                        LinearLayout.LayoutParams currentLineParams =
+                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                        currentLineParams.weight = 1;
+                        currentLineParams.topMargin = 10;
+                        currentLineParams.bottomMargin = 10;
+                        lineView.setLayoutParams(currentLineParams);
+
+                        rowLayout.addView(lineView, currentLineParams);
+                    }
+                }
+                else if(gridContentWidgets.get(index2) == 2||
+                        gridContentWidgets.get(index2) == 3){
+                    View currentImg = (View)widgetList.get(index2);
+                    currentImg.setLayoutParams(currentCellParams);
+
+                    lineLayout.addView(currentImg, currentCellParams);
+                    if(hasHorizontalBorder(k, n)){
+                        View lineView = makeHorizontalLine();
+                        LinearLayout.LayoutParams currentLineParams =
+                                new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+                        currentLineParams.weight = 1;
+                        currentLineParams.topMargin = 10;
+                        currentLineParams.bottomMargin = 5;
+                        lineView.setLayoutParams(currentLineParams);
+
+                        lineLayout.addView(lineView, currentLineParams);
+                    }
+                    rowLayout.addView(lineLayout, lineParams);
+                    if(hasVerticalBorder(k, n)){
+                        LinearLayout.LayoutParams currentLineSpaceParams  =
+                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                        currentLineSpaceParams.weight = 1;
+                        Space spacerLine = new Space(rowLayout.getContext());
+                        rowLayout.addView(spacerLine, currentLineSpaceParams);
+
+                        View lineView = makeVerticalLine();
+                        LinearLayout.LayoutParams currentLineParams =
+                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                        currentLineParams.weight = 1;
+                        currentLineParams.topMargin = 10;
+                        currentLineParams.bottomMargin = 10;
+                        lineView.setLayoutParams(currentLineParams);
+
+                        rowLayout.addView(lineView, currentLineParams);
+                    }
+                }
+                else if(gridContentWidgets.get(index2) == 9||
+                        gridContentWidgets.get(index2) == 10){
+                    View currentRating = (View) widgetList.get(index2);
+                    currentRating.setLayoutParams(currentCellParams);
+
+                    lineLayout.addView(currentRating, currentCellParams);
+                    if(hasHorizontalBorder(k, n)){
+                        View lineView = makeHorizontalLine();
+                        LinearLayout.LayoutParams currentLineParams =
+                                new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+                        currentLineParams.weight = 1;
+                        currentLineParams.topMargin = 10;
+                        currentLineParams.bottomMargin = 5;
+                        lineView.setLayoutParams(currentLineParams);
+
+                        lineLayout.addView(lineView, currentLineParams);
+                    }
+                    rowLayout.addView(lineLayout, lineParams);
+                    if(hasVerticalBorder(k, n)){
+                        LinearLayout.LayoutParams currentLineSpaceParams  =
+                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                        currentLineSpaceParams.weight = 1;
+                        Space spacerLine = new Space(rowLayout.getContext());
+                        rowLayout.addView(spacerLine, currentLineSpaceParams);
+
+                        View lineView = makeVerticalLine();
+                        LinearLayout.LayoutParams currentLineParams =
+                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                        currentLineParams.weight = 1;
+                        currentLineParams.topMargin = 10;
+                        currentLineParams.bottomMargin = 10;
+                        lineView.setLayoutParams(currentLineParams);
+
+                        rowLayout.addView(lineView, currentLineParams);
+                    }
+                }
+                else if(gridContentWidgets.get(index2) == 11||
+                        gridContentWidgets.get(index2) == 12||
+                        gridContentWidgets.get(index2) == 13){
+                    View currentView = (View)widgetList.get(index2);
+                    currentView.setLayoutParams(currentCellParams);
+
+                    if(currentView.getParent()!=null)
+                        ((ViewGroup)currentView.getParent()).removeView(currentView);
+                    lineLayout.addView(currentView, currentCellParams);
+                    if(hasHorizontalBorder(k, n)){
+                        View lineView = makeHorizontalLine();
+                        LinearLayout.LayoutParams currentLineParams =
+                                new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+                        currentLineParams.weight = 1;
+                        currentLineParams.topMargin = 10;
+                        currentLineParams.bottomMargin = 5;
+                        lineView.setLayoutParams(currentLineParams);
+
+                        lineLayout.addView(lineView, currentLineParams);
+                    }
+                    rowLayout.addView(lineLayout, lineParams);
+                    if(hasVerticalBorder(k, n)){
+                        LinearLayout.LayoutParams currentLineSpaceParams  =
+                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                        currentLineSpaceParams.weight = 1;
+                        Space spacerLine = new Space(rowLayout.getContext());
+                        rowLayout.addView(spacerLine, currentLineSpaceParams);
+
+                        View lineView = makeVerticalLine();
+                        LinearLayout.LayoutParams currentLineParams =
+                                new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                        currentLineParams.weight = 1;
+                        currentLineParams.topMargin = 10;
+                        currentLineParams.bottomMargin = 10;
+                        lineView.setLayoutParams(currentLineParams);
+
+                        rowLayout.addView(lineView, currentLineParams);
+                    }
+                }
+
+                horizontalWeight = specs.get(index2)[3];
+                if(horizontalWeight > 1){
+                    n = n+(horizontalWeight-1);
+                }
+                ++index2;
+            }
+            //Add a spacer object at the end of the row
+            LinearLayout.LayoutParams currentSpaceParams  =
+                    new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+            currentSpaceParams.weight = 1;
+            Space spacerLast = new Space(rowLayout.getContext());
+            rowLayout.addView(spacerLast, currentSpaceParams);
+
+            contentLayout.addView(rowLayout);
         }
     }
 
