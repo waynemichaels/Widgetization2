@@ -11,6 +11,7 @@
         android:textColor="@android:color/black"
         android:fontFamily="@font/helveticaneue_bold"
         android:textSize="22sp"
+        android:text="BRAIDS"
         android:layout_gravity="center"/>
     <TextView
         android:id="@+id/textViewBottom"
@@ -19,6 +20,7 @@
         android:textColor="@android:color/black"
         android:fontFamily="@font/helveticaneue_light"
         android:textSize="20sp"
+        android:text="style"
         android:layout_gravity="center"/>
 
 </LinearLayout>

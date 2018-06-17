@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.media.Image;
 import android.os.Build;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
@@ -23,7 +24,9 @@ import android.view.ViewManager;
 import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RatingBar;
 import android.widget.RelativeLayout;
 import android.widget.Space;
@@ -124,31 +127,60 @@ public class CustomWidget extends RelativeLayout {
 
     //Initialization of testing values
     {
-        cellSpans.add(new int[]{0,1,1,2});
-        cellSpans.add(new int[]{3,0,1,2});
+        /**cellSpans.add(new int[]{0,0,1,3});
+        cellSpans.add(new int[]{3,0,1,3});
+        cellSpans.add(new int[]{5,0,1,3});
+        cellSpans.add(new int[]{5,0,1,3});
+        cellSpans.add(new int[]{6,0,1,3});
+        cellSpans.add(new int[]{7,0,1,3});
+        cellSpans.add(new int[]{13,0,1,2});**/
         
-        horizontalBorders.add(new int[]{0,0,2});
-        horizontalBorders.add(new int[]{2,1,3});
+        //horizontalBorders.add(new int[]{0,0,2});
+        //horizontalBorders.add(new int[]{2,1,3});
 
-        verticalBorders.add(new int[]{0,0,3});
-        verticalBorders.add(new int[]{1,1,3});
+        //verticalBorders.add(new int[]{0,0,3});
+        //verticalBorders.add(new int[]{1,1,3});
 
-        shrinkRows.add(1);
-        shrinkRows.add(3);
+        //shrinkRows.add(1);
+        //shrinkRows.add(3);
         
+        /**gridContentWidgets.add(1);
         gridContentWidgets.add(0);
+        gridContentWidgets.add(0);
+        gridContentWidgets.add(0);
+        gridContentWidgets.add(11);
+        gridContentWidgets.add(11);
+        gridContentWidgets.add(11);
+        gridContentWidgets.add(1);
         gridContentWidgets.add(8);
         gridContentWidgets.add(8);
+        gridContentWidgets.add(8);
+        gridContentWidgets.add(1);
         gridContentWidgets.add(0);
-        gridContentWidgets.add(0);
+        gridContentWidgets.add(13);
+        gridContentWidgets.add(2);
+        gridContentWidgets.add(2);
+        gridContentWidgets.add(2);
+        gridContentWidgets.add(3);
+        gridContentWidgets.add(3);
+        gridContentWidgets.add(3);
+        gridContentWidgets.add(4);
+        gridContentWidgets.add(4);
+        gridContentWidgets.add(4);
+        gridContentWidgets.add(5);
+        gridContentWidgets.add(5);
+        gridContentWidgets.add(5);
+        gridContentWidgets.add(6);
+        gridContentWidgets.add(6);
+        gridContentWidgets.add(6);
+        gridContentWidgets.add(7);
+        gridContentWidgets.add(7);
         gridContentWidgets.add(8);
         gridContentWidgets.add(8);
         gridContentWidgets.add(8);
-        gridContentWidgets.add(0);
-        gridContentWidgets.add(0);
-        gridContentWidgets.add(0);
-        gridContentWidgets.add(0);
-        gridContentWidgets.add(0);
+        gridContentWidgets.add(9);
+        gridContentWidgets.add(9);
+        gridContentWidgets.add(9);**/
     }
 
     public CustomWidget(Context context) {
@@ -324,16 +356,21 @@ public class CustomWidget extends RelativeLayout {
         }
     }
 
-    public void setProfilePic(int resource){
-        imageProfile.setImageResource(resource);
+    public void addViews(int... viewTypes){
+        gridContentWidgets.clear();
+        for(int vw:viewTypes){
+            gridContentWidgets.add(vw);
+        }
+        buildWidgets();
+        makeLayout();
+        setEventListeners();
     }
 
-    public void setTitle(String title){
-        textviewTitle.setText(title);
-    }
-
-    public void setDescription(String description){
-        textviewDescription.setText(description);
+    public void addColumnSpans(int[]... spns){
+        cellSpans.clear();
+        for(int[] sp:spns){
+            cellSpans.add(sp);
+        }
     }
 
     public void setSmallText(int i, int j, String text){
@@ -341,33 +378,115 @@ public class CustomWidget extends RelativeLayout {
         txt.setText(text);
     }
 
-    public TextView getTextview(int i, int j){
-        int index = getIndex(i,j);
-        for (int k = 0; k< widgetList.size();k++){
-            Log.d("HERE!!!!!",""+widgetList.get(k).getClass().toString());
-        }
-
-        return (TextView) widgetList.get(index);
+    public void setBigText(int i, int j, String text){
+        TextView txt = (TextView) getTextview(i,j);
+        txt.setText(text);
     }
 
-    private int getIndex(int i, int j){
-        int index = 0;
-        for(int[] cell:specs){
-            if(cell[0] == i && cell[1] == j){
-                break;
-            }
-            index++;
-        }
-        return index;
+    public void setSmallImage(int i, int j, int drawableId){
+        ImageView img = (ImageView) getImageview(i,j);
+        Drawable myIcon = getResources().getDrawable(drawableId);
+        img.setImageDrawable(myIcon);
     }
 
-    private void removeProfilePic(){
+    public void setBigImage(int i, int j, int drawableId){
+        ImageView img = (ImageView) getImageview(i,j);
+        Drawable myIcon = getResources().getDrawable(drawableId);
+        img.setImageDrawable(myIcon);
+    }
+
+    public void setPercentage(int i, int j, int percent, String label){
+        TextView txtTop = (TextView) getTextViewTop(i,j);
+        TextView txtBottom = (TextView) getTextViewBottom(i,j);
+        txtTop.setText(""+percent+"%");
+        txtBottom.setText(label);
+    }
+
+    public void setCurrency(int i, int j, int amount, String label){
+        TextView txtTop = (TextView) getTextViewRight(i,j);
+        TextView txtBottom = (TextView) getTextViewLeft(i,j);
+        txtTop.setText("ksh "+amount);
+        txtBottom.setText(label);
+    }
+
+    public void setDate(int i, int j, Date dt){
+        if (dt==null){
+            dt = new Date();
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+        String dateTxt = sdf.format(dt);
+        TextView txt = (TextView) getTextview(i,j);
+        txt.setText(dateTxt);
+    }
+
+    public void setHLValue(int i, int j, String leftString, String rightString){
+        TextView txtLeft = (TextView) getTextViewLeft(i,j);
+        TextView txtRight = (TextView) getTextViewRight(i,j);
+        txtLeft.setText(leftString);
+        txtRight.setText(rightString);
+    }
+
+    public void setVLValue(int i, int j, String topString, String bottomString){
+        TextView txtTop = (TextView) getTextViewTop(i,j);
+        TextView txtBottom = (TextView) getTextViewBottom(i,j);
+        txtTop.setText(topString);
+        txtBottom.setText(bottomString);
+    }
+
+    public void setProgress(int i, int j,int progress, String label){
+        TextView innerText = (TextView) getProgressBarInnerText(i,j);
+        TextView labelText = (TextView) getProgressBarLabel(i,j);
+        ProgressBar prog = (ProgressBar) getProgressBar(i,j);
+        innerText.setText(""+progress);
+        labelText.setText(label);
+        prog.setProgress(progress);
+    }
+
+    public void setRating(int i, int j,int value){
+        RatingBar prog = (RatingBar) getRatingBar(i,j);
+        prog.setRating((float)value);
+    }
+
+    public void setButtonListener(int i, int j, OnClickListener btnListener){
+        Button btn = (Button) getButton(i,j);
+        btn.setOnClickListener(btnListener);
+    }
+
+    public void setButtonText(int i, int j, String btnText){
+        Button btn = (Button) getButton(i,j);
+        btn.setText(btnText);
+    }
+
+    public void removeProfilePic(){
         imageProfile.setVisibility(View.GONE);
     }
 
-    private void removeTitleDescription(){
-        textviewTitle.setVisibility(View.GONE);
+    public void removeTitleDescription(){
         textviewDescription.setVisibility(View.GONE);
+    }
+
+    public void removeTitle(){
+        textviewTitle.setVisibility(View.GONE);
+        invalidate();
+    }
+
+    public void setProfilePic(int resource){
+        imageProfile.setVisibility(View.VISIBLE);
+        imageProfile.setImageResource(resource);
+    }
+
+    public void setTitle(String title){
+        textviewTitle.setVisibility(View.VISIBLE);
+        textviewTitle.setText(title);
+    }
+
+    public void setDescription(String description){
+        textviewDescription.setVisibility(View.VISIBLE);
+        textviewDescription.setText(description);
+    }
+
+    public void close(){
+        ((ViewManager)card.getParent()).removeView(card);
     }
 
     private void addShrinkButtonEvent(final ImageButton btn, final int index){
@@ -384,8 +503,88 @@ public class CustomWidget extends RelativeLayout {
         });
     }
 
-    private void close(){
-        ((ViewManager)card.getParent()).removeView(card);
+    public TextView getTextview(int i, int j){
+        int index = getIndex(i,j);
+        return (TextView) widgetList.get(index);
+    }
+
+    public ImageView getImageview(int i, int j){
+        int index = getIndex(i,j);
+        View currView = (View) widgetList.get(index);
+        return (ImageView)currView.findViewById(R.id.circularImage);
+    }
+
+    public TextView getTextViewTop(int i, int j){
+        int index = getIndex(i,j);
+        View currView = (View) widgetList.get(index);
+        return (TextView)currView.findViewById(R.id.textViewTop);
+    }
+
+    public TextView getTextViewBottom(int i, int j){
+        int index = getIndex(i,j);
+        View currView = (View) widgetList.get(index);
+        return (TextView)currView.findViewById(R.id.textViewBottom);
+    }
+
+    public TextView getTextViewLeft(int i, int j){
+        int index = getIndex(i,j);
+        View currView = (View) widgetList.get(index);
+        return (TextView)currView.findViewById(R.id.textViewLeft);
+    }
+
+    public TextView getTextViewRight(int i, int j){
+        int index = getIndex(i,j);
+        View currView = (View) widgetList.get(index);
+        return (TextView)currView.findViewById(R.id.textViewRight);
+    }
+
+    public ProgressBar getProgressBar(int i, int j){
+        int index = getIndex(i,j);
+        View currView = (View) widgetList.get(index);
+        return (ProgressBar) currView.findViewById(R.id.circular_progressbar);
+    }
+
+    public TextView getProgressBarInnerText(int i, int j){
+        int index = getIndex(i,j);
+        View currView = (View) widgetList.get(index);
+        return (TextView) currView.findViewById(R.id.innerText);
+    }
+
+    public TextView getProgressBarLabel(int i, int j){
+        int index = getIndex(i,j);
+        View currView = (View) widgetList.get(index);
+        return (TextView) currView.findViewById(R.id.outerText);
+    }
+
+    public RatingBar getRatingBar(int i, int j){
+        int index = getIndex(i,j);
+        View currView = (View) widgetList.get(index);
+        return (RatingBar) currView.findViewById(R.id.ratingsCustom);
+    }
+
+    public Button getButton(int i, int j){
+        int index = getIndex(i,j);
+        View currView = (View) widgetList.get(index);
+        return (Button) currView.findViewById(R.id.customButton);
+    }
+
+
+    /**public ImageView getImageView(int i, int j){
+        int index = getIndex(i,j);
+    }**/
+
+    private int getIndex(int i, int j){
+        int index = 0;
+        for(int[] cell:specs){
+            /**Log.d("HERE!!!!!","INDEX :"+index+" ROW :"+cell[0]+" COLUMN :"+
+                    cell[1]+" ROWSPAN :"+cell[2]+" COLUMNSPAN :"+
+                    cell[3]);**/
+            if(cell[0] == i && cell[1] == j){
+                return index;
+            }
+            index++;
+        }
+        return index;
     }
 
     private void setEventListeners(){
@@ -417,16 +616,14 @@ public class CustomWidget extends RelativeLayout {
      * This method loops through the arrayList gridContentWidgets, creates the necessary object then add
      * the objects to the arrayList widgetList
      */
-    @RequiresApi(api = Build.VERSION_CODES.M)
     private void buildWidgets(){
         buttonDelete = (ImageButton)card.findViewById(R.id.button_Delete);
         buttonEdit = (ImageButton)card.findViewById(R.id.button_Edit);
         buttonInfo = (ImageButton)card.findViewById(R.id.button_Info);
         buttonShrink = (ImageButton)card.findViewById(R.id.button_Shrink);
-        imageProfile = (CircleImageView) contentLayout.findViewById(R.id.image_ProfileImage);
-        textviewTitle = (TextView)contentLayout.findViewById(R.id.textView_Title);
-        textviewDescription = (TextView) contentLayout.findViewById(R.id.textView_Description);
-
+        imageProfile = (CircleImageView) card.findViewById(R.id.image_ProfileImage);
+        textviewTitle = (TextView)card.findViewById(R.id.textView_Title);
+        textviewDescription = (TextView) card.findViewById(R.id.textView_Description);
         int index = 0;
         for (int i:gridContentWidgets){
             switch (i){
@@ -456,7 +653,7 @@ public class CustomWidget extends RelativeLayout {
                     break;
                 case bigImage:
                     LayoutInflater  inflater2 = LayoutInflater.from(contentLayout.getContext());
-                    View img2 = inflater2.inflate(R.layout.circle_image_small, null);
+                    View img2 = inflater2.inflate(R.layout.circle_image_big, null);
 
                     widgetList.add(img2);
                     break;
@@ -595,16 +792,18 @@ public class CustomWidget extends RelativeLayout {
                 than 1
                 NB: We initialized at the top
                 */
-                for(int[] spannedCell : cellSpans){
-                    if(spannedHorizontally(i,j) > 1 || spannedVertically(i,j) > 1){
-                        //set the row and column spec if any
-                        cellSpec[0] = i;
-                        cellSpec[1] = j;
-                        cellSpec[2] = spannedVertically(i,j);
-                        cellSpec[3] = spannedHorizontally(i,j);
-                        cellAdded = true;
-                        j = j+(spannedCell[3]-1);
-                    }
+                if(spannedHorizontally(i,j) > 1 || spannedVertically(i,j) > 1){
+
+                    //set the row and column spec if any
+                    cellSpec[0] = i;
+                    cellSpec[1] = j;
+                    cellSpec[2] = spannedVertically(i,j);
+                    cellSpec[3] = spannedHorizontally(i,j);
+                    cellAdded = true;
+                    j = j + cellSpec[3]-1;
+                    /**Log.d("HERE!!!!!","INDEX :"+index+" ROW :"+i+" COLUMN :"+
+                            j+" ROWSPAN :"+cellSpec[2]+" COLUMNSPAN :"+
+                            cellSpec[3]);**/
                 }
                 /*
                 check if the cell has already been speced above, if not
@@ -617,7 +816,7 @@ public class CustomWidget extends RelativeLayout {
                     cellSpec[3] = 1;
                 }
 
-                //add the cell configuration to the global variable specs
+                //add the     android:layout_gravity="center_horizontal"cell configuration to the global variable specs
                 specs.add(cellSpec);
                 ++index;
                 /**Log.d("HERE!!!!!","INDEX :"+index+" ROW :"+i+" COLUMN :"+
@@ -703,6 +902,8 @@ public class CustomWidget extends RelativeLayout {
                 int horizontalWeight = specs.get(index2)[3];
                 currentCellParams.weight = horizontalWeight;
                 currentCellParams.gravity = Gravity.CENTER_VERTICAL;
+                int currWidth = screenWidth>0 ? screenWidth/3 : 0;
+                currentCellParams.width = currWidth*horizontalWeight;
 
                 //create layout and parameters to be used for adding horizontal lines to each cell
                 LinearLayout lineLayout = new LinearLayout(contentLayout.getContext());
@@ -723,6 +924,7 @@ public class CustomWidget extends RelativeLayout {
                 if(gridContentWidgets.get(index2) == 0 ||
                         gridContentWidgets.get(index2) == 1 ||
                         gridContentWidgets.get(index2) == 6){
+                    //currentCellParams.width = screenWidth/columnNumber;
                     //get the view from the array list widgetList
                     TextView currentTxt = (TextView)widgetList.get(index2);
                     currentTxt.setLayoutParams(currentCellParams);
@@ -806,7 +1008,8 @@ public class CustomWidget extends RelativeLayout {
                         gridContentWidgets.get(index2) == 3){
                     View currentImg = (View)widgetList.get(index2);
                     currentImg.setLayoutParams(currentCellParams);
-
+                    if(currentImg.getParent()!=null)
+                        ((ViewGroup)currentImg.getParent()).removeView(currentImg);
                     lineLayout.addView(currentImg, currentCellParams);
                     if(hasHorizontalBorder(k, n)){
                         View lineView = makeHorizontalLine();
@@ -842,6 +1045,9 @@ public class CustomWidget extends RelativeLayout {
                         gridContentWidgets.get(index2) == 10){
                     View currentRating = (View) widgetList.get(index2);
                     currentRating.setLayoutParams(currentCellParams);
+
+                    if(currentRating.getParent()!=null)
+                        ((ViewGroup)currentRating.getParent()).removeView(currentRating);
 
                     lineLayout.addView(currentRating, currentCellParams);
                     if(hasHorizontalBorder(k, n)){
@@ -931,10 +1137,16 @@ public class CustomWidget extends RelativeLayout {
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
+    @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR1)
     public void init(@Nullable AttributeSet set){
         inflate(getContext(),R.layout.card_layout,this);
         contentLayout = (LinearLayout) findViewById(R.id.contentLayout);
         card = findViewById(R.id.cardParent);
+
+        buildWidgets();
+        makeLayout();
+        setEventListeners();
 
         //through this ViewTreeObserver object's addOnPreDrawListener event listener we can get the dimensions of the screen
         //as soon as the layout dimensions are calculated
@@ -948,10 +1160,18 @@ public class CustomWidget extends RelativeLayout {
                 buildWidgets();
                 makeLayout();
                 setEventListeners();
-                setSmallText(0,0, "MIKE");
-
                 return true;
             }
+
         });
+
+        int b = 0;
+
+        /**for(int[] k: specs){
+            Log.d("HERE!!!!!","INDEX :"+b+" ROW :"+k[0]+" COLUMN :"+
+                    k[1]+" ROWSPAN :"+k[2]+" COLUMNSPAN :"+
+                    k[3]);
+            b++;
+        }**/
     }
 }
